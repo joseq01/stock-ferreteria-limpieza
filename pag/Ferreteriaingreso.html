@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Lista de Compras</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="d-flex flex-column min-vh-100" onload="cargarLista()">
+
+<!-- Barra de navegación -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#">Control de Stock</a>
+        <img id="logo" src="../image/Logos-Janos.png" width="100"  alt="logojanos">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link active" href="../pag/ferreteria.html">Ferreteria</a>      
+                </li>
+                <li> <a class="nav-link active" href="#">Ingresos</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-5">
+    <h2 class="text-center">Agregar Artículos</h2>
+
+    <!-- Formulario -->
+    <div class="card p-3">
+        <div class="mb-3">
+            <label for="articulo" class="form-label">Artículo:</label>
+            <input type="text" id="articulo" class="form-control" list="listaSugerencias" placeholder="Nombre del artículo">
+            <datalist id="listaSugerencias"></datalist>
+        </div>
+        <div class="mb-3">
+            <label for="cantidad" class="form-label">Cantidad:</label>
+            <input type="number" id="cantidad" class="form-control" placeholder="Cantidad">
+        </div>
+        <button class="btn btn-primary" onclick="agregarArticulo()">Agregar a la Lista</button>
+    </div>
+
+    <!-- Tabla de artículos -->
+    <h3 class="mt-4">Lista de Compras:</h3>
+    <table class="table table-striped mt-2">
+        <thead>
+            <tr>
+                <th>Artículo</th>
+                <th>Cantidad</th>
+                <th>Fecha</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="tablaArticulos"></tbody>
+    </table>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Script para manejar la tabla con localStorage y autocompletado -->
+<script>
+    
+    function agregarArticulo() {
+        let articulo = document.getElementById("articulo").value.trim();
+        let cantidad = document.getElementById("cantidad").value.trim();
+
+        if (articulo === "" || cantidad === "" || isNaN(cantidad) || cantidad <= 0) {
+            mostrarToast("Por favor, ingresa un artículo y una cantidad válida.");
+            return;
+        }
+
+        // Obtener la fecha actual en formato dd/mm/yyyy
+        let fecha = new Date();
+        let fechaFormateada = fecha.toLocaleDateString('es-AR');
+
+        // Obtener lista actual del localStorage
+        let lista = JSON.parse(localStorage.getItem("listaCompras")) || [];
+
+        // Agregar nuevo artículo con la fecha
+        lista.push({ articulo, cantidad, fecha: fechaFormateada });
+
+        // Guardar en localStorage
+        localStorage.setItem("listaCompras", JSON.stringify(lista));
+
+        // Actualizar tabla y sugerencias
+        cargarLista();
+
+        // Limpiar campos
+        document.getElementById("articulo").value = "";
+        document.getElementById("cantidad").value = "";
+    }
+
+    function cargarLista() {
+        let tabla = document.getElementById("tablaArticulos");
+        let sugerencias = document.getElementById("listaSugerencias");
+        tabla.innerHTML = "";
+        sugerencias.innerHTML = "";
+
+        let lista = JSON.parse(localStorage.getItem("listaCompras")) || [];
+        let articulosUnicos = new Set();
+
+        lista.forEach((item, index) => {
+            let fila = document.createElement("tr");
+            fila.innerHTML = `
+                <td>${item.articulo}</td>
+                <td>${item.cantidad}</td>
+                <td>${item.fecha || "-"}</td>
+                <td>
+                    <button class="btn btn-danger btn-sm" onclick="eliminarFila(${index})">Eliminar</button>
+                </td>
+            `;
+            tabla.appendChild(fila);
+            articulosUnicos.add(item.articulo);
+        });
+
+        articulosUnicos.forEach(art => {
+            let option = document.createElement("option");
+            option.value = art;
+            sugerencias.appendChild(option);
+        });
+    }
+
+    function eliminarFila(index) {
+        let lista = JSON.parse(localStorage.getItem("listaCompras")) || [];
+        lista.splice(index, 1);
+        localStorage.setItem("listaCompras", JSON.stringify(lista));
+        cargarLista();
+    }
+
+    function mostrarToast(mensaje, tipo = "info") {
+    const mensajeDiv = document.getElementById("mensajeFlotante");
+    mensajeDiv.className = `alert alert-${tipo} text-center`;
+    mensajeDiv.innerText = mensaje;
+    mensajeDiv.classList.remove("d-none");
+
+    setTimeout(() => {
+        mensajeDiv.classList.add("d-none");
+    }, 3000);
+}
+</script>
+<!-- Mensaje flotante -->
+<div id="mensajeFlotante" class="alert alert-info text-center d-none" role="alert"
+     style="position: fixed; top: 80px; right: 20px; z-index: 1050; border-radius: 0.5rem;">
+</div>
+
+
+<!-- Footer -->
+<footer class="bg-dark text-white text-center py-3 mt-auto">
+    © 2025 Todos los derechos reservados para Jose Quin
+</footer>
+
+</body>
+</html>

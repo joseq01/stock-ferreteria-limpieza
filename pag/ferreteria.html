@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lista de Artículos</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+  <style>
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+
+      #contenido-imprimir, #contenido-imprimir * {
+        visibility: visible;
+      }
+
+      #contenido-imprimir {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+      }
+
+      nav, footer, .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="d-flex flex-column min-vh-100" onload="mostrarStock()">
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">Control de Stock</a>
+    <img id="logo" src="../image/Logos-Janos.png" width="100" alt="logojanos" />
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link active" href="../index.html">Inicio</a></li>
+        <li class="nav-item"><a class="nav-link active" href="#">Ferreteria</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="menuDropdown" role="button" data-bs-toggle="dropdown">Opciones</a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="../pag/Ferreteriaingreso.html">Ingreos</a></li>
+            <li><a class="dropdown-item" href="../pag/ferreteriapedidos.html">Pedidos</a></li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Contenido a imprimir -->
+<div id="contenido-imprimir" class="container mt-5">
+  <h2 class="text-center mb-4">Stock Actual</h2>
+  <table class="table table-bordered">
+    <thead>
+      <tr>
+        <th>Artículo</th>
+        <th>Cantidad Comprada</th>
+        <th>Cantidad Pedida</th>
+        <th>Stock Actual</th>
+      </tr>
+    </thead>
+    <tbody id="tablaStockActual"></tbody>
+  </table>
+
+  <div class="d-flex justify-content-between">
+    <button class="btn btn-success" onclick="guardarCambios()">Guardar Cambios</button>
+    <button class="btn btn-secondary no-print" onclick="window.print()">Imprimir</button>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    
+  function mostrarStock() {
+    const compras = JSON.parse(localStorage.getItem("listaCompras")) || [];
+    const pedidos = JSON.parse(localStorage.getItem("listaPedidos")) || [];
+
+    const stock = {};
+
+    compras.forEach(item => {
+      const articulo = item.articulo;
+      const cantidad = parseInt(item.cantidad);
+      if (!stock[articulo]) stock[articulo] = { compra: 0, pedido: 0 };
+      stock[articulo].compra += cantidad;
+    });
+
+    pedidos.forEach(item => {
+      const articulo = item.articulo;
+      const cantidad = parseInt(item.cantidad);
+      if (!stock[articulo]) stock[articulo] = { compra: 0, pedido: 0 };
+      stock[articulo].pedido += cantidad;
+    });
+
+    const tabla = document.getElementById("tablaStockActual");
+    tabla.innerHTML = "";
+
+    for (let articulo in stock) {
+      const compra = stock[articulo].compra;
+      const pedido = stock[articulo].pedido;
+      const restante = compra - pedido;
+
+      const fila = document.createElement("tr");
+      fila.innerHTML = `
+        <td>${articulo}</td>
+        <td>${compra}</td>
+        <td>
+          <input type="number" class="form-control pedido" 
+                id="pedido-${articulo}" 
+                value="${pedido}" 
+                onchange="actualizarStock('${articulo}', ${compra})">
+        </td>
+        <td><span id="stock-${articulo}">${restante}</span></td>
+      `;
+      tabla.appendChild(fila);
+    }
+  }
+
+  function actualizarStock(articulo, compra) {
+    const input = document.getElementById(`pedido-${articulo}`);
+    const nuevoPedido = parseInt(input.value) || 0;
+    const nuevoStock = compra - nuevoPedido;
+    document.getElementById(`stock-${articulo}`).innerText = nuevoStock;
+  }
+
+  function guardarCambios() {
+    const inputs = document.querySelectorAll('.pedido');
+    const nuevosPedidos = [];
+
+    inputs.forEach(input => {
+      const articulo = input.id.replace('pedido-', '');
+      const cantidad = parseInt(input.value);
+      if (!isNaN(cantidad) && cantidad >= 0) {
+        nuevosPedidos.push({ articulo, cantidad });
+      }
+    });
+
+    localStorage.setItem("listaPedidos", JSON.stringify(nuevosPedidos));
+
+    // Mostrar el cuadro de mensaje
+  const mensaje = document.getElementById("mensajeConfirmacion");
+  mensaje.classList.remove("d-none");
+
+  // Ocultarlo después de 3 segundos
+  setTimeout(() => {
+    mensaje.classList.add("d-none");
+  }, 3000);
+
+     }
+</script>
+
+<div id="mensajeConfirmacion" class="alert alert-success text-center mx-3 d-none" role="alert" style="position: fixed; top: 80px; right: 20px; z-index: 1050; border-radius: 0.5rem;">
+    Pedidos actualizados correctamente.
+  </div>
+
+<!-- Footer -->
+<footer class="bg-dark text-white text-center py-3 mt-auto">
+  © 2025 Todos los derechos reservados para Jose Quin
+</footer>
+
+</body>
+</html>
+
