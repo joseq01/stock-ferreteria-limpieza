@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Lista de Compras</title>
+    <title>Lista ingreso limpieza</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
@@ -20,7 +20,7 @@
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav">
                 <li class="nav-item">
-                    <a class="nav-link active" href="../pag/ferreteria.html">Ferreteria</a>      
+                    <a class="nav-link active" href="../pag/limpieza.html">limpieza</a>      
                 </li>
                 <li> <a class="nav-link active" href="#">Ingresos</a></li>
             </ul>
@@ -65,21 +65,25 @@
 
 <!-- Script para manejar la tabla con localStorage y autocompletado -->
 <script type="module">
+window.mostrarToast = function (mensaje, tipo = "info") {
+    const toast = document.getElementById("mensajeFlotante");
+    toast.textContent = mensaje;
+    toast.className = `alert alert-${tipo} text-center`;
+    toast.classList.remove("d-none");
+
+    setTimeout(() => {
+      toast.classList.add("d-none");
+    }, 3000);
+  };
+
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
-    import {
-      getFirestore,
-      collection,
-      addDoc,
-      getDocs,
-      deleteDoc,
-      doc
-    } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
   
     const firebaseConfig = {
       apiKey: "AIzaSyCqaYq0CfEVhjj3Sk7MufFEpd-j8-YGYV8",
       authDomain: "stock-ferreteria-limpieza.firebaseapp.com",
       projectId: "stock-ferreteria-limpieza",
-      storageBucket: "stock-ferreteria-limpieza.appspot.com",
+      storageBucket: "stock-ferreteria-limpieza.firebasestorage.app",
       messagingSenderId: "958385126824",
       appId: "1:958385126824:web:a2d630678db1edae85319d"
     };
@@ -87,55 +91,56 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
   
-    async function agregarArticulo() {
-      let articulo = document.getElementById("articulo").value.trim();
-      let cantidad = document.getElementById("cantidad").value.trim();
+    // Reemplazamos localStorage por Firestore
+    window.agregarArticulo = async function () {
+      const articulo = document.getElementById("articulo").value.trim();
+      const cantidad = document.getElementById("cantidad").value.trim();
   
       if (articulo === "" || cantidad === "" || isNaN(cantidad) || cantidad <= 0) {
         mostrarToast("Por favor, ingresa un artículo y una cantidad válida.");
         return;
       }
   
-      let fecha = new Date();
-      let fechaFormateada = fecha.toLocaleDateString('es-AR');
+      const fecha = new Date().toLocaleDateString('es-AR');
   
       try {
-        await addDoc(collection(db, "comprasferreteria"), {
+        await addDoc(collection(db, "comprasLimpieza"), {
           articulo,
           cantidad: parseInt(cantidad),
-          fecha: fechaFormateada
+          fecha
         });
+  
         cargarLista();
         document.getElementById("articulo").value = "";
         document.getElementById("cantidad").value = "";
       } catch (error) {
-        console.error("Error al agregar: ", error);
+        console.error("Error al agregar:", error);
+        mostrarToast("Error al guardar el artículo", "danger");
       }
-    }
+    };
   
-    async function cargarLista() {
+    window.cargarLista = async function () {
       const tabla = document.getElementById("tablaArticulos");
       const sugerencias = document.getElementById("listaSugerencias");
       tabla.innerHTML = "";
       sugerencias.innerHTML = "";
   
-      const snapshot = await getDocs(collection(db, "comprasferreteria"));
+      const querySnapshot = await getDocs(collection(db, "comprasLimpieza"));
       const articulosUnicos = new Set();
   
-      snapshot.forEach((docSnap) => {
-        const item = docSnap.data();
-        const id = docSnap.id;
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
         const fila = document.createElement("tr");
         fila.innerHTML = `
-          <td>${item.articulo}</td>
-          <td>${item.cantidad}</td>
-          <td>${item.fecha || "-"}</td>
+          <td>${data.articulo}</td>
+          <td>${data.cantidad}</td>
+          <td>${data.fecha || "-"}</td>
           <td>
-            <button class="btn btn-danger btn-sm" onclick="eliminarFila('${id}')">Eliminar</button>
+            <button class="btn btn-danger btn-sm" onclick="eliminarFila('${docSnap.id}')">Eliminar</button>
           </td>
         `;
         tabla.appendChild(fila);
-        articulosUnicos.add(item.articulo);
+        articulosUnicos.add(data.articulo);
       });
   
       articulosUnicos.forEach((art) => {
@@ -143,23 +148,20 @@
         option.value = art;
         sugerencias.appendChild(option);
       });
-    }
+    };
   
-    async function eliminarFila(id) {
+    window.eliminarFila = async function (docId) {
       try {
-        await deleteDoc(doc(db, "comprasferreteria", id));
+        await deleteDoc(doc(db, "comprasLimpieza", docId));
         cargarLista();
       } catch (error) {
-        console.error("Error al eliminar: ", error);
+        console.error("Error al eliminar:", error);
+        mostrarToast("Error al eliminar", "danger");
       }
-    }
+    };
   
-    // Exponer funciones al navegador
-    window.agregarArticulo = agregarArticulo;
-    window.cargarLista = cargarLista;
-    window.eliminarFila = eliminarFila;
   </script>
-
+  
 <!-- Mensaje flotante -->
 <div id="mensajeFlotante" class="alert alert-info text-center d-none" role="alert"
      style="position: fixed; top: 80px; right: 20px; z-index: 1050; border-radius: 0.5rem;">

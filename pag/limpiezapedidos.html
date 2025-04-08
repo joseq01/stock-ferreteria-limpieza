@@ -1,48 +1,47 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lista de Compras</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pedidos Limpieza</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
 </head>
-<body class="d-flex flex-column min-vh-100" onload="cargarListaPedidos()">
+<body class="d-flex flex-column min-vh-100">
 
 <!-- NAVBAR -->
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
   <div class="container-fluid">
     <a class="navbar-brand" href="#">Control de Stock</a>
-    <img id="logo" src="../image/Logos-Janos.png" width="100" alt="logojanos">
+    <img id="logo" src="../image/Logos-Janos.png" width="100" alt="logojanos" />
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navbarNav">
       <ul class="navbar-nav">
-        <li class="nav-item">
-          <a class="nav-link active" href="../pag/ferreteria.html">Ferretería</a>
-        </li>
-        <li><a class="nav-link active" href="#">Pedidos</a></li>
+        <li class="nav-item"><a class="nav-link active" href="../index.html">Inicio</a></li>
+        <li class="nav-item"><a class="nav-link active" href="#">Pedidos</a></li>
       </ul>
     </div>
   </div>
 </nav>
 
+<!-- CONTENIDO -->
 <div class="container mt-5">
-  <h2 class="text-center">Pedidos</h2>
+  <h2 class="text-center">Pedidos - Limpieza</h2>
 
-  <!-- ALERTA / TOAST -->
+  <!-- TOAST -->
   <div id="toastContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>
 
   <!-- FORMULARIO -->
   <div class="card p-3">
     <div class="mb-3">
       <label for="articulo" class="form-label">Artículo:</label>
-      <input type="text" id="articulo" class="form-control" list="listaSugerencias" placeholder="Nombre del artículo">
+      <input type="text" id="articulo" class="form-control" list="listaSugerencias" placeholder="Nombre del artículo" />
       <datalist id="listaSugerencias"></datalist>
     </div>
     <div class="mb-3">
       <label for="cantidad" class="form-label">Cantidad:</label>
-      <input type="number" id="cantidad" class="form-control" placeholder="Cantidad">
+      <input type="number" id="cantidad" class="form-control" placeholder="Cantidad" />
     </div>
     <button class="btn btn-primary" onclick="agregarArticulo()">Agregar a la Lista</button>
   </div>
@@ -62,14 +61,10 @@
   </table>
 </div>
 
-<!-- SCRIPTS -->
-<!-- SCRIPTS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- FIREBASE + SCRIPT -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import {
-    getFirestore, collection, addDoc, getDocs, deleteDoc, doc
-  } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCqaYq0CfEVhjj3Sk7MufFEpd-j8-YGYV8",
@@ -77,62 +72,59 @@
     projectId: "stock-ferreteria-limpieza",
     storageBucket: "stock-ferreteria-limpieza.appspot.com",
     messagingSenderId: "958385126824",
-    appId: "1:958385126824:web:a2d630678db1edae85319d"
+    appId: "1:958385126824:web:a2d630678db1edae85319d",
+    measurementId: "G-3M1MNQKVYB"
   };
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
-  const colPedidos = collection(db, "pedidosferreteria");
-  const colCompras = collection(db, "comprasferreteria");
 
   async function agregarArticulo() {
-    const inputArticulo = document.getElementById("articulo").value.trim().toLowerCase();
-    const inputCantidad = parseInt(document.getElementById("cantidad").value.trim());
+    const articulo = document.getElementById("articulo").value.trim().toLowerCase();
+    const cantidad = parseInt(document.getElementById("cantidad").value.trim());
 
-    if (!inputArticulo || isNaN(inputCantidad) || inputCantidad <= 0) {
-      mostrarToast("Por favor, ingresa un artículo y una cantidad válida mayor a cero.");
+    if (!articulo || isNaN(cantidad) || cantidad <= 0) {
+      mostrarToast("Por favor, ingresa un artículo y una cantidad válida.");
       return;
     }
 
-    const comprasSnap = await getDocs(colCompras);
-    const pedidosSnap = await getDocs(colPedidos);
+    const comprasSnapshot = await getDocs(collection(db, "comprasLimpieza"));
+    const pedidosSnapshot = await getDocs(collection(db, "pedidosLimpieza"));
 
     const stock = {};
 
-    comprasSnap.forEach(docSnap => {
-      const data = docSnap.data();
-      const art = (data.articulo || data.Artículo || "").toLowerCase();
-      const cant = parseInt(data.cantidad) || 0;
-      if (!stock[art]) stock[art] = 0;
-      stock[art] += cant;
+    comprasSnapshot.forEach(doc => {
+      const data = doc.data();
+      const art = data.articulo.toLowerCase();
+      if (!stock[art]) stock[art] = { compra: 0, pedido: 0 };
+      stock[art].compra += parseInt(data.cantidad);
     });
 
-    pedidosSnap.forEach(docSnap => {
-      const data = docSnap.data();
-      const art = (data.articulo || data.Artículo || "").toLowerCase();
-      const cant = parseInt(data.cantidad) || 0;
-      if (!stock[art]) stock[art] = 0;
-      stock[art] -= cant;
+    pedidosSnapshot.forEach(doc => {
+      const data = doc.data();
+      const art = data.articulo.toLowerCase();
+      if (!stock[art]) stock[art] = { compra: 0, pedido: 0 };
+      stock[art].pedido += parseInt(data.cantidad);
     });
 
-    const disponible = stock[inputArticulo] || 0;
+    if (!stock[articulo] || stock[articulo].compra === 0) {
+      mostrarToast("Este artículo no está en compras o no tiene stock.");
+      return;
+    }
 
-    if (inputCantidad > disponible) {
-      mostrarToast(`No hay suficiente stock. Disponible: ${disponible}`);
+    const disponible = stock[articulo].compra - stock[articulo].pedido;
+    if (cantidad > disponible) {
+      mostrarToast(`Stock insuficiente. Disponible: ${disponible}`);
       return;
     }
 
     const fecha = new Date().toLocaleDateString("es-AR");
-    await addDoc(colPedidos, {
-      articulo: inputArticulo,
-      cantidad: inputCantidad,
-      fecha
-    });
+    await addDoc(collection(db, "pedidosLimpieza"), { articulo, cantidad, fecha });
 
-    mostrarToast("Artículo agregado correctamente", "success");
-    cargarListaPedidos();
     document.getElementById("articulo").value = "";
     document.getElementById("cantidad").value = "";
+    mostrarToast("Pedido agregado correctamente.", "success");
+    cargarListaPedidos();
   }
 
   async function cargarListaPedidos() {
@@ -141,27 +133,25 @@
     tabla.innerHTML = "";
     sugerencias.innerHTML = "";
 
-    const pedidosSnap = await getDocs(colPedidos);
-    const comprasSnap = await getDocs(colCompras);
-
-    pedidosSnap.forEach((docSnap) => {
+    const pedidosSnapshot = await getDocs(collection(db, "pedidosLimpieza"));
+    pedidosSnapshot.forEach((docSnap) => {
       const data = docSnap.data();
-      const fila = document.createElement("tr");
-      fila.innerHTML = `
-        <td>${data.articulo || data.Artículo}</td>
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${data.articulo}</td>
         <td>${data.cantidad}</td>
         <td>${data.fecha || "-"}</td>
         <td>
           <button class="btn btn-danger btn-sm" onclick="eliminarFila('${docSnap.id}')">Eliminar</button>
-        </td>`;
-      tabla.appendChild(fila);
+        </td>
+      `;
+      tabla.appendChild(row);
     });
 
+    const comprasSnapshot = await getDocs(collection(db, "comprasLimpieza"));
     const articulosSet = new Set();
-    comprasSnap.forEach(docSnap => {
-      const data = docSnap.data();
-      const art = (data.articulo || data.Artículo || "").toLowerCase();
-      articulosSet.add(art);
+    comprasSnapshot.forEach(doc => {
+      articulosSet.add(doc.data().articulo.toLowerCase());
     });
 
     articulosSet.forEach(art => {
@@ -172,29 +162,35 @@
   }
 
   async function eliminarFila(id) {
-    await deleteDoc(doc(db, "pedidosferreteria", id));
+    await deleteDoc(doc(db, "pedidosLimpieza", id));
     mostrarToast("Artículo eliminado", "warning");
     cargarListaPedidos();
   }
-
-  window.agregarArticulo = agregarArticulo;
-  window.eliminarFila = eliminarFila;
-  document.addEventListener("DOMContentLoaded", cargarListaPedidos);
 
   function mostrarToast(mensaje, tipo = "danger") {
     const toastContainer = document.getElementById("toastContainer");
     const toast = document.createElement("div");
     toast.className = `toast align-items-center text-bg-${tipo} border-0 show`;
     toast.setAttribute("role", "alert");
+    toast.setAttribute("aria-live", "assertive");
+    toast.setAttribute("aria-atomic", "true");
     toast.innerHTML = `
       <div class="d-flex">
         <div class="toast-body">${mensaje}</div>
         <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-      </div>`;
+      </div>
+    `;
     toastContainer.appendChild(toast);
     setTimeout(() => toast.remove(), 4000);
   }
+
+  // Inicializar
+  document.addEventListener("DOMContentLoaded", cargarListaPedidos);
+  window.agregarArticulo = agregarArticulo;
+  window.eliminarFila = eliminarFila;
 </script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <!-- FOOTER -->
 <footer class="bg-dark text-white text-center py-3 mt-auto">
