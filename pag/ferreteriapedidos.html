@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lista de Compras</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lista de Pedidos</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
 </head>
-<body class="d-flex flex-column min-vh-100" onload="cargarListaPedidos()">
+<body class="d-flex flex-column min-vh-100">
 
 <!-- NAVBAR -->
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -18,9 +18,7 @@
     </button>
     <div class="collapse navbar-collapse" id="navbarNav">
       <ul class="navbar-nav">
-        <li class="nav-item">
-          <a class="nav-link active" href="../pag/ferreteria.html">Ferretería</a>
-        </li>
+        <li class="nav-item"><a class="nav-link active" href="../pag/ferreteria.html">Ferretería</a></li>
         <li><a class="nav-link active" href="#">Pedidos</a></li>
       </ul>
     </div>
@@ -47,6 +45,12 @@
     <button class="btn btn-primary" onclick="agregarArticulo()">Agregar a la Lista</button>
   </div>
 
+  <!-- BÚSQUEDA -->
+  <input type="text" class="form-control mt-4" id="busqueda" placeholder="Buscar artículo..." oninput="filtrarTabla()">
+
+  <!-- MENSAJE DE CARGA -->
+  <div id="mensajeCarga" class="text-center text-muted mt-3">Cargando datos...</div>
+
   <!-- TABLA -->
   <h3 class="mt-4">Lista de Pedidos:</h3>
   <table class="table table-striped mt-2">
@@ -62,13 +66,12 @@
   </table>
 </div>
 
-<!-- SCRIPTS -->
-<!-- SCRIPTS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import {
-    getFirestore, collection, addDoc, getDocs, deleteDoc, doc
+    getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, getDocs
   } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -96,23 +99,20 @@
 
     const comprasSnap = await getDocs(colCompras);
     const pedidosSnap = await getDocs(colPedidos);
-
     const stock = {};
 
     comprasSnap.forEach(docSnap => {
       const data = docSnap.data();
       const art = (data.articulo || data.Artículo || "").toLowerCase();
       const cant = parseInt(data.cantidad) || 0;
-      if (!stock[art]) stock[art] = 0;
-      stock[art] += cant;
+      stock[art] = (stock[art] || 0) + cant;
     });
 
     pedidosSnap.forEach(docSnap => {
       const data = docSnap.data();
       const art = (data.articulo || data.Artículo || "").toLowerCase();
       const cant = parseInt(data.cantidad) || 0;
-      if (!stock[art]) stock[art] = 0;
-      stock[art] -= cant;
+      stock[art] = (stock[art] || 0) - cant;
     });
 
     const disponible = stock[inputArticulo] || 0;
@@ -130,56 +130,70 @@
     });
 
     mostrarToast("Artículo agregado correctamente", "success");
-    cargarListaPedidos();
     document.getElementById("articulo").value = "";
     document.getElementById("cantidad").value = "";
-  }
-
-  async function cargarListaPedidos() {
-    const tabla = document.getElementById("tablaArticulos");
-    const sugerencias = document.getElementById("listaSugerencias");
-    tabla.innerHTML = "";
-    sugerencias.innerHTML = "";
-
-    const pedidosSnap = await getDocs(colPedidos);
-    const comprasSnap = await getDocs(colCompras);
-
-    pedidosSnap.forEach((docSnap) => {
-      const data = docSnap.data();
-      const fila = document.createElement("tr");
-      fila.innerHTML = `
-        <td>${data.articulo || data.Artículo}</td>
-        <td>${data.cantidad}</td>
-        <td>${data.fecha || "-"}</td>
-        <td>
-          <button class="btn btn-danger btn-sm" onclick="eliminarFila('${docSnap.id}')">Eliminar</button>
-        </td>`;
-      tabla.appendChild(fila);
-    });
-
-    const articulosSet = new Set();
-    comprasSnap.forEach(docSnap => {
-      const data = docSnap.data();
-      const art = (data.articulo || data.Artículo || "").toLowerCase();
-      articulosSet.add(art);
-    });
-
-    articulosSet.forEach(art => {
-      const option = document.createElement("option");
-      option.value = art;
-      sugerencias.appendChild(option);
-    });
   }
 
   async function eliminarFila(id) {
     await deleteDoc(doc(db, "pedidosferreteria", id));
     mostrarToast("Artículo eliminado", "warning");
-    cargarListaPedidos();
   }
+
+  function escucharPedidosTiempoReal() {
+    const tabla = document.getElementById("tablaArticulos");
+    const sugerencias = document.getElementById("listaSugerencias");
+    const articulosSet = new Set();
+    const mensajeCarga = document.getElementById("mensajeCarga");
+
+    onSnapshot(colPedidos, (snapshot) => {
+      tabla.innerHTML = "";
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        const fila = document.createElement("tr");
+        fila.innerHTML = `
+          <td>${data.articulo || data.Artículo}</td>
+          <td>${data.cantidad}</td>
+          <td>${data.fecha || "-"}</td>
+          <td>
+            <button class="btn btn-danger btn-sm" onclick="eliminarFila('${docSnap.id}')">Eliminar</button>
+          </td>`;
+        tabla.appendChild(fila);
+      });
+      mensajeCarga.style.display = "none";
+      filtrarTabla(); // para mantener el filtro activo
+    });
+
+    getDocs(colCompras).then(comprasSnap => {
+      sugerencias.innerHTML = "";
+      comprasSnap.forEach(docSnap => {
+        const data = docSnap.data();
+        const art = (data.articulo || data.Artículo || "").toLowerCase();
+        articulosSet.add(art);
+      });
+      articulosSet.forEach(art => {
+        const option = document.createElement("option");
+        option.value = art;
+        sugerencias.appendChild(option);
+      });
+    });
+  }
+
+  // Filtrar la tabla según texto de búsqueda
+  window.filtrarTabla = function () {
+    const filtro = document.getElementById("busqueda").value.toLowerCase();
+    const filas = document.querySelectorAll("#tablaArticulos tr");
+    filas.forEach(fila => {
+      const texto = fila.textContent.toLowerCase();
+      fila.style.display = texto.includes(filtro) ? "" : "none";
+    });
+  };
+
+  window.addEventListener("DOMContentLoaded", () => {
+    escucharPedidosTiempoReal();
+  });
 
   window.agregarArticulo = agregarArticulo;
   window.eliminarFila = eliminarFila;
-  document.addEventListener("DOMContentLoaded", cargarListaPedidos);
 
   function mostrarToast(mensaje, tipo = "danger") {
     const toastContainer = document.getElementById("toastContainer");
@@ -203,3 +217,5 @@
 
 </body>
 </html>
+
+

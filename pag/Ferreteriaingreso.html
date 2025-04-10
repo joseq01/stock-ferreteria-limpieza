@@ -1,130 +1,159 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Lista de Compras</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lista de Compras</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
 </head>
-<body class="d-flex flex-column min-vh-100" onload="cargarLista()">
+<body class="d-flex flex-column min-vh-100" style="padding-top: 80px;">
 
-<!-- Barra de navegación -->
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="#">Control de Stock</a>
-        <img id="logo" src="../image/Logos-Janos.png" width="100"  alt="logojanos">
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav">
-                <li class="nav-item">
-                    <a class="nav-link active" href="../pag/ferreteria.html">Ferreteria</a>      
-                </li>
-                <li> <a class="nav-link active" href="#">Ingresos</a></li>
-            </ul>
-        </div>
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">Control de Stock</a>
+    <img id="logo" src="../image/Logos-Janos.png" width="100" alt="logojanos" />
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav">
+        <li class="nav-item">
+          <a class="nav-link active" href="../pag/ferreteria.html">Ferretería</a>
+        </li>
+        <li>
+          <a class="nav-link active" href="#">Ingresos</a>
+        </li>
+      </ul>
     </div>
+  </div>
 </nav>
 
+<!-- Contenido principal -->
 <div class="container mt-5">
-    <h2 class="text-center">Agregar Artículos</h2>
+  <h2 class="text-center">Agregar Artículos</h2>
 
-    <!-- Formulario -->
-    <div class="card p-3">
-        <div class="mb-3">
-            <label for="articulo" class="form-label">Artículo:</label>
-            <input type="text" id="articulo" class="form-control" list="listaSugerencias" placeholder="Nombre del artículo">
-            <datalist id="listaSugerencias"></datalist>
-        </div>
-        <div class="mb-3">
-            <label for="cantidad" class="form-label">Cantidad:</label>
-            <input type="number" id="cantidad" class="form-control" placeholder="Cantidad">
-        </div>
-        <button class="btn btn-primary" onclick="agregarArticulo()">Agregar a la Lista</button>
+  <!-- Formulario -->
+  <div class="card p-3">
+    <div class="mb-3">
+      <label for="articulo" class="form-label">Artículo:</label>
+      <input type="text" id="articulo" class="form-control" list="listaSugerencias" placeholder="Nombre del artículo" />
+      <datalist id="listaSugerencias"></datalist>
     </div>
+    <div class="mb-3">
+      <label for="cantidad" class="form-label">Cantidad:</label>
+      <input type="number" id="cantidad" class="form-control" placeholder="Cantidad" />
+    </div>
+    <button class="btn btn-primary" onclick="agregarArticulo()">Agregar a la Lista</button>
+  </div>
 
-    <!-- Tabla de artículos -->
-    <h3 class="mt-4">Lista de Compras:</h3>
-    <table class="table table-striped mt-2">
-        <thead>
-            <tr>
-                <th>Artículo</th>
-                <th>Cantidad</th>
-                <th>Fecha</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody id="tablaArticulos"></tbody>
-    </table>
+  <!-- Tabla -->
+  <h3 class="mt-4">Lista de Compras:</h3>
+  <table class="table table-striped mt-2">
+    <thead>
+      <tr>
+        <th>Artículo</th>
+        <th>Cantidad</th>
+        <th>Fecha</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="tablaArticulos"></tbody>
+  </table>
 </div>
 
-<!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Mensaje flotante -->
+<div id="mensajeFlotante" class="alert alert-info text-center d-none" role="alert"
+     style="position: fixed; top: 80px; right: 20px; z-index: 1050; border-radius: 0.5rem;">
+</div>
 
-<!-- Script para manejar la tabla con localStorage y autocompletado -->
+<!-- Mensaje de carga si tarda -->
+<div id="mensajeCarga" class="alert alert-warning text-center d-none" role="alert"
+     style="position: fixed; top: 130px; right: 20px; z-index: 1050;">
+  Cargando datos... Esto podría tardar un momento.
+</div>
+
+<!-- Firebase -->
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
-    import {
-      getFirestore,
-      collection,
-      addDoc,
-      getDocs,
-      deleteDoc,
-      doc
-    } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
-  
-    const firebaseConfig = {
-      apiKey: "AIzaSyCqaYq0CfEVhjj3Sk7MufFEpd-j8-YGYV8",
-      authDomain: "stock-ferreteria-limpieza.firebaseapp.com",
-      projectId: "stock-ferreteria-limpieza",
-      storageBucket: "stock-ferreteria-limpieza.appspot.com",
-      messagingSenderId: "958385126824",
-      appId: "1:958385126824:web:a2d630678db1edae85319d"
-    };
-  
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-  
-    async function agregarArticulo() {
-      let articulo = document.getElementById("articulo").value.trim();
-      let cantidad = document.getElementById("cantidad").value.trim();
-  
-      if (articulo === "" || cantidad === "" || isNaN(cantidad) || cantidad <= 0) {
-        mostrarToast("Por favor, ingresa un artículo y una cantidad válida.");
-        return;
-      }
-  
-      let fecha = new Date();
-      let fechaFormateada = fecha.toLocaleDateString('es-AR');
-  
-      try {
-        await addDoc(collection(db, "comprasferreteria"), {
-          articulo,
-          cantidad: parseInt(cantidad),
-          fecha: fechaFormateada
-        });
-        cargarLista();
-        document.getElementById("articulo").value = "";
-        document.getElementById("cantidad").value = "";
-      } catch (error) {
-        console.error("Error al agregar: ", error);
-      }
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+  import {
+    getFirestore,
+    collection,
+    addDoc,
+    deleteDoc,
+    doc,
+    onSnapshot
+  } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCqaYq0CfEVhjj3Sk7MufFEpd-j8-YGYV8",
+    authDomain: "stock-ferreteria-limpieza.firebaseapp.com",
+    projectId: "stock-ferreteria-limpieza",
+    storageBucket: "stock-ferreteria-limpieza.appspot.com",
+    messagingSenderId: "958385126824",
+    appId: "1:958385126824:web:a2d630678db1edae85319d"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const colCompras = collection(db, "comprasferreteria");
+
+  async function agregarArticulo() {
+    const articulo = document.getElementById("articulo").value.trim();
+    const cantidad = document.getElementById("cantidad").value.trim();
+
+    if (!articulo || isNaN(cantidad) || cantidad <= 0) {
+      mostrarToast("Por favor, ingresa un artículo y una cantidad válida.");
+      return;
     }
-  
-    async function cargarLista() {
-      const tabla = document.getElementById("tablaArticulos");
-      const sugerencias = document.getElementById("listaSugerencias");
+
+    const fecha = new Date().toLocaleDateString('es-AR');
+
+    try {
+      await addDoc(colCompras, {
+        articulo,
+        cantidad: parseInt(cantidad),
+        fecha
+      });
+      document.getElementById("articulo").value = "";
+      document.getElementById("cantidad").value = "";
+    } catch (error) {
+      console.error("Error al agregar: ", error);
+    }
+  }
+
+  async function eliminarFila(id) {
+    try {
+      await deleteDoc(doc(db, "comprasferreteria", id));
+    } catch (error) {
+      console.error("Error al eliminar: ", error);
+    }
+  }
+
+  function mostrarMensajeCarga() {
+    document.getElementById("mensajeCarga").classList.remove("d-none");
+  }
+
+  function ocultarMensajeCarga() {
+    document.getElementById("mensajeCarga").classList.add("d-none");
+  }
+
+  function escucharCambiosTiempoReal() {
+    const tabla = document.getElementById("tablaArticulos");
+    const sugerencias = document.getElementById("listaSugerencias");
+    const articulosUnicos = new Set();
+
+    const timeout = setTimeout(mostrarMensajeCarga, 3000);
+
+    onSnapshot(colCompras, (snapshot) => {
       tabla.innerHTML = "";
       sugerencias.innerHTML = "";
-  
-      const snapshot = await getDocs(collection(db, "comprasferreteria"));
-      const articulosUnicos = new Set();
-  
+      articulosUnicos.clear();
+
       snapshot.forEach((docSnap) => {
         const item = docSnap.data();
         const id = docSnap.id;
+
         const fila = document.createElement("tr");
         fila.innerHTML = `
           <td>${item.articulo}</td>
@@ -135,40 +164,44 @@
           </td>
         `;
         tabla.appendChild(fila);
-        articulosUnicos.add(item.articulo);
+
+        articulosUnicos.add(item.articulo.toLowerCase());
       });
-  
+
       articulosUnicos.forEach((art) => {
         const option = document.createElement("option");
         option.value = art;
         sugerencias.appendChild(option);
       });
-    }
-  
-    async function eliminarFila(id) {
-      try {
-        await deleteDoc(doc(db, "comprasferreteria", id));
-        cargarLista();
-      } catch (error) {
-        console.error("Error al eliminar: ", error);
-      }
-    }
-  
-    // Exponer funciones al navegador
-    window.agregarArticulo = agregarArticulo;
-    window.cargarLista = cargarLista;
-    window.eliminarFila = eliminarFila;
-  </script>
 
-<!-- Mensaje flotante -->
-<div id="mensajeFlotante" class="alert alert-info text-center d-none" role="alert"
-     style="position: fixed; top: 80px; right: 20px; z-index: 1050; border-radius: 0.5rem;">
-</div>
+      clearTimeout(timeout);
+      ocultarMensajeCarga();
+    });
+  }
 
+  // Funciones globales
+  window.agregarArticulo = agregarArticulo;
+  window.eliminarFila = eliminarFila;
+
+  // Cargar
+  window.addEventListener("DOMContentLoaded", escucharCambiosTiempoReal);
+
+  function mostrarToast(mensaje) {
+    const alerta = document.getElementById("mensajeFlotante");
+    alerta.textContent = mensaje;
+    alerta.classList.remove("d-none");
+    setTimeout(() => {
+      alerta.classList.add("d-none");
+    }, 3000);
+  }
+</script>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <!-- Footer -->
 <footer class="bg-dark text-white text-center py-3 mt-auto">
-    © 2025 Todos los derechos reservados para Jose Quin
+  © 2025 Todos los derechos reservados para Jose Quin
 </footer>
 
 </body>
