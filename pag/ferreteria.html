@@ -98,7 +98,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
   import {
-    getFirestore, collection, onSnapshot, setDoc, doc, deleteDoc, getDocs
+    getFirestore, collection, onSnapshot, setDoc, doc, deleteDoc
   } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -208,18 +208,20 @@
 
   window.guardarCambios = async function () {
     mostrarMensajeCarga();
-    const pedidosSnap = await getDocs(collection(db, "pedidosferreteria"));
-    for (const docu of pedidosSnap.docs) {
-      await deleteDoc(doc(db, "pedidosferreteria", docu.id));
-    }
 
     for (const [articulo, cantidad] of Object.entries(cambiosPendientes)) {
       if (!isNaN(cantidad) && cantidad >= 0) {
-        await setDoc(doc(db, "pedidosferreteria", articulo), {
-          articulo: articulo,
-          cantidad: cantidad,
-          fecha: new Date().toLocaleDateString("es-AR")
-        });
+        const docRef = doc(db, "pedidosferreteria", articulo);
+
+        if (cantidad === 0) {
+          await deleteDoc(docRef);
+        } else {
+          await setDoc(docRef, {
+            articulo: articulo,
+            cantidad: cantidad,
+            fecha: new Date().toLocaleDateString("es-AR")
+          });
+        }
       }
     }
 
